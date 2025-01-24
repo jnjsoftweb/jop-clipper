@@ -1,0 +1,13 @@
+.jop-clipper-icon {
+  color: var(--text-normal);
+}
+
+.jop-clipper-settings {
+  padding: 10px;
+}
+
+.jop-clipper-settings input {
+  width: 100%;
+  padding: 5px;
+  margin-bottom: 10px;
+}
