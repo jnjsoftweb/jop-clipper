@@ -1,9 +1,9 @@
 import { App, Plugin, PluginSettingTab, Setting, Command, MarkdownView, Notice } from "obsidian";
 import "./styles.css";
 import { ClipperData } from "./data";
-import { fetchData } from "./utils/html";
-import { createMarkdown } from "./utils/markdown";
-import { saveMarkdownToVault } from "./utils/vault";
+import { fetchData } from "./core/html";
+import { createMarkdown } from "./core/markdown";
+import { saveMarkdownToVault } from "./core/vault";
 
 interface ClipperSettings {
   apiKey: string;
