@@ -56,11 +56,11 @@ export default class ClipperPlugin extends Plugin {
         throw new Error("Invalid URL in clipboard");
       }
 
-      // URL에서 clipType, properties, html 가져오기
-      const { clipType, properties, html } = await fetchData(url);
+      // URL에서 pattern, properties, html 가져오기
+      const { pattern, properties, html } = await fetchData(url);
 
-      // clipType, properties, html에서 Markdown 생성
-      const markdown = createMarkdown(clipType, properties, html);
+      // pattern, properties, html에서 Markdown 생성
+      const markdown = createMarkdown(pattern, properties, html);
 
       // 파일 이름 생성 (URL의 마지막 부분 사용)
       const filename = new URL(url).pathname.split("/").pop() || "clipped-page";

@@ -1,11 +1,12 @@
 import TurndownService from "turndown";
 
 interface ClipProperties {
-  title?: string;
+  title: string;
   url: string;
-  author?: string;
-  date?: string;
-  tags?: string[];
+  author: string;
+  date: string;
+  tags: string[];
+  created: string;
   [key: string]: any;
 }
 
@@ -20,13 +21,28 @@ const turndownService = new TurndownService({
 function createFrontMatter(properties: ClipProperties): string {
   const frontMatter = ["---"];
 
-  if (properties.title) frontMatter.push(`title: "${properties.title}"`);
-  if (properties.url) frontMatter.push(`url: "${properties.url}"`);
-  if (properties.author) frontMatter.push(`author: "${properties.author}"`);
-  if (properties.date) frontMatter.push(`date: "${properties.date}"`);
-  if (properties.tags && properties.tags.length > 0) {
-    frontMatter.push(`tags: [${properties.tags.join(", ")}]`);
-  }
+  // 필수 속성들을 순서대로 추가
+  frontMatter.push(`title: "${properties.title}"`);
+  frontMatter.push(`url: "${properties.url}"`);
+  frontMatter.push(`author: "${properties.author}"`);
+  frontMatter.push(`date: "${properties.date}"`);
+  frontMatter.push(`created: "${properties.created}"`);
+
+  // tags는 배열이므로 특별 처리
+  frontMatter.push(`tags: [${properties.tags.join(", ")}]`);
+
+  // 추가 속성이 있다면 처리
+  Object.entries(properties).forEach(([key, value]) => {
+    if (!["title", "url", "author", "date", "tags", "created"].includes(key)) {
+      if (Array.isArray(value)) {
+        frontMatter.push(`${key}: [${value.join(", ")}]`);
+      } else if (typeof value === "string") {
+        frontMatter.push(`${key}: "${value}"`);
+      } else {
+        frontMatter.push(`${key}: ${value}`);
+      }
+    }
+  });
 
   frontMatter.push("---", "", "");
   return frontMatter.join("\n");
@@ -55,9 +71,9 @@ function createDefaultMarkdown(properties: ClipProperties, html: string): string
   return frontMatter + markdown;
 }
 
-export function createMarkdown(clipType: string, properties: ClipProperties, html: string): string {
+export function createMarkdown(pattern: string, properties: ClipProperties, html: string): string {
   try {
-    switch (clipType) {
+    switch (pattern) {
       case "youtube":
         return createYoutubeMarkdown(properties, html);
       case "tistory":
