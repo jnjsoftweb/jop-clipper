@@ -63,7 +63,9 @@ export default class ClipperPlugin extends Plugin {
       const markdown = createMarkdown(pattern, properties, html);
 
       // 파일 이름 생성 (URL의 마지막 부분 사용)
-      const filename = new URL(url).pathname.split("/").pop() || "clipped-page";
+      // const filename = new URL(url).pathname.split("/").pop() || "clipped-page";
+      const sanitizeFileName = (v: string) => v.replace(/[\\/:*?"<>|]/g, "");
+      const filename = sanitizeFileName(properties.title);
 
       // Markdown을 볼트에 저장
       await saveMarkdownToVault(this.app, markdown, filename, "Clippings");

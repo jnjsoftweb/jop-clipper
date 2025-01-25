@@ -46,12 +46,13 @@ const SETTINGS: PatternRule[] = [
         attribute: "content",
       },
       author: {
-        selector: "meta[property='og:article:author']",
+        selector: "meta[name='by']",
         attribute: "content",
       },
       date: {
         selector: "meta[property='article:published_time']",
         attribute: "content",
+        // callback: "formatDate",
       },
       tags: {
         value: ["clipping/tistory"],
@@ -61,25 +62,7 @@ const SETTINGS: PatternRule[] = [
       },
     },
     rootSelector: ".tt_article_useless_p_margin",
-    removeSelectors: [
-      "script",
-      "style",
-      ".another_category",
-      ".container_postbtn",
-      ".article-footer",
-      "#daumSearchBox",
-      ".wrap_sub",
-      ".revenue_unit_wrap",
-      ".article-header",
-      ".article-toolbar",
-      ".revenue_unit_info",
-      "#article-reply",
-      "#related-articles",
-      ".container_postbtn",
-      ".article_author",
-      ".article_tag",
-      ".sns_btn",
-    ],
+    removeSelectors: ["script", "style"],
   },
   {
     pattern: "blog/naver",
@@ -210,6 +193,10 @@ function executeCallback(callbackName: string, value: string): string {
       const month = String(now.getMonth() + 1).padStart(2, "0");
       const day = String(now.getDate()).padStart(2, "0");
       return `${year}-${month}-${day}`;
+    },
+    formatDate: (v: string) => {
+      return v;
+      // return v.split("T")[0];
     },
   };
 
@@ -353,7 +340,7 @@ export async function fetchData(url: string): Promise<ClipData> {
 
     // 빈 값이 아닌 속성만 포함
     const frontmatterProperties: ClipProperties = {
-      title: properties.title || "",
+      title: properties.title || "Untitled",
       url: properties.url,
       author: properties.author || "",
       date: properties.date || "",
