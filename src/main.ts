@@ -4,7 +4,7 @@ import { ClipperData } from "./data";
 import { fetchData } from "./core/html";
 import { createMarkdown } from "./core/markdown";
 import { saveMarkdownToVault } from "./core/vault";
-
+import { sanitizeName } from "./utils";
 interface ClipperSettings {
   apiKey: string;
 }
@@ -57,15 +57,13 @@ export default class ClipperPlugin extends Plugin {
       }
 
       // URL에서 pattern, properties, html 가져오기
-      const { pattern, properties, html } = await fetchData(url);
+      const { pattern, properties, html } = await fetchData(url, this.app.vault);
 
       // pattern, properties, html에서 Markdown 생성
       const markdown = createMarkdown(pattern, properties, html);
 
-      // 파일 이름 생성 (URL의 마지막 부분 사용)
-      // const filename = new URL(url).pathname.split("/").pop() || "clipped-page";
-      const sanitizeFileName = (v: string) => v.replace(/[\\/:*?"<>|]/g, "");
-      const filename = sanitizeFileName(properties.title);
+      // 파일 이름 생성
+      const filename = sanitizeName(properties.title);
 
       // Markdown을 볼트에 저장
       await saveMarkdownToVault(this.app, markdown, filename, "Clippings");

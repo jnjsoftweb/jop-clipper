@@ -1,110 +1,18 @@
-import { requestUrl } from "obsidian";
-
-interface ClipProperties {
-  title: string;
-  url: string;
-  author: string;
-  date: string;
-  tags: string[];
-  created: string;
-  [key: string]: any;
-}
-
-interface ClipData {
-  pattern: string;
-  properties: ClipProperties;
-  html: string;
-}
-
-interface PropertyRule {
-  selector?: string;
-  attribute?: string;
-  callback?: string;
-  value?: string | string[];
-}
-
-interface PatternRule {
-  pattern: string;
-  urlPatterns: string[];
-  fetchType: "fetchSimple" | "fetchWithRedirect" | "fetchByChrome";
-  callback?: string;
-  properties: {
-    [key: string]: PropertyRule;
-  };
-  rootSelector: string;
-  removeSelectors?: string[];
-}
-
-const SETTINGS: PatternRule[] = [
-  {
-    pattern: "blog/tistory",
-    urlPatterns: ["tistory.com"],
-    fetchType: "fetchSimple",
-    properties: {
-      title: {
-        selector: "meta[property='og:title']",
-        attribute: "content",
-      },
-      author: {
-        selector: "meta[name='by']",
-        attribute: "content",
-      },
-      date: {
-        selector: "meta[property='article:published_time']",
-        attribute: "content",
-        // callback: "formatDate",
-      },
-      tags: {
-        value: ["clipping/tistory"],
-      },
-      created: {
-        callback: "today",
-      },
-    },
-    rootSelector: ".tt_article_useless_p_margin",
-    removeSelectors: ["script", "style"],
-  },
-  {
-    pattern: "blog/naver",
-    urlPatterns: ["blog.naver.com"],
-    fetchType: "fetchWithRedirect",
-    callback: "fetchWithRedirect_naverBlog",
-    properties: {
-      title: {
-        selector: "",
-        attribute: "text",
-      },
-      author: {
-        selector: "",
-        attribute: "text",
-      },
-      date: {
-        selector: "",
-        attribute: "text",
-      },
-      tags: {
-        value: ["clipping/naver"],
-      },
-      created: {
-        callback: "today",
-      },
-    },
-    rootSelector: "#postListBody",
-    removeSelectors: [
-      "script",
-      "style",
-      ".revenue_unit_wrap",
-      ".na_ad",
-      ".naver-splugin",
-      ".area_reply",
-      "#comments",
-      ".area_related_post",
-      ".area_paging",
-      ".area_paging_simple",
-      ".area_paging_simple_wrap",
-    ],
-  },
-];
+import { requestUrl, TFile, Vault } from "obsidian";
+import { SETTINGS, DefaultRule, DefaultProperties } from "../rules";
+import { fetchWithRedirect_naverBlog } from "../rules/blog-naver";
+import { PatternRule, PropertyRule, ClipProperties, ClipData, RedirectCallback } from "../types";
+import {
+  sanitizeName,
+  replaceHyphen,
+  today,
+  formatDate,
+  formatYoutubeDate,
+  decodeHtmlEntities,
+  extractHashtags,
+  extractYoutubeDescription,
+  extractYoutubeTags,
+} from "../utils";
 
 function routeUrl(url: string): PatternRule {
   const hostname = new URL(url).hostname;
@@ -116,35 +24,13 @@ function routeUrl(url: string): PatternRule {
   }
 
   // 기본 규칙
-  return {
-    pattern: "webpage",
-    urlPatterns: ["*"],
-    fetchType: "fetchSimple",
-    properties: {
-      title: {
-        selector: "h1",
-        attribute: "text",
-      },
-      tags: {
-        value: ["webpage"],
-      },
-      created: {
-        callback: "today",
-      },
-    },
-    rootSelector: "body",
-    removeSelectors: ["script", "style", "header", "footer", "nav"],
-  };
+  return DefaultRule;
 }
 
 function extractProperties(doc: Document, rule: PatternRule, url: string): ClipProperties {
   const properties: ClipProperties = {
-    title: "",
+    ...DefaultProperties,
     url: url,
-    author: "",
-    date: "",
-    tags: [],
-    created: "",
   };
 
   // 각 속성 추출
@@ -152,13 +38,6 @@ function extractProperties(doc: Document, rule: PatternRule, url: string): ClipP
     // value가 있는 경우 직접 값 사용
     if (propertyRule.value !== undefined) {
       properties[key] = propertyRule.value;
-      continue;
-    }
-
-    // callback이 있는 경우 실행
-    if (propertyRule.callback) {
-      properties[key] = executeCallback(propertyRule.callback, "");
-      continue;
     }
 
     // selector가 있는 경우 DOM에서 값 추출
@@ -166,15 +45,29 @@ function extractProperties(doc: Document, rule: PatternRule, url: string): ClipP
       const element = doc.querySelector(propertyRule.selector);
       if (element) {
         let value = propertyRule.attribute === "text" ? element.textContent : element.getAttribute(propertyRule.attribute || "");
-
         if (value) {
           value = value.trim();
           // callback 함수가 있다면 실행
           if (propertyRule.callback) {
-            value = executeCallback(propertyRule.callback, value);
+            const result = executeCallback(propertyRule.callback, value, doc);
+            if (key === 'tags' && Array.isArray(result)) {
+              properties[key] = [...(properties[key] || []), ...result];
+            } else if (typeof result === 'string') {
+              properties[key] = result;
+            }
+          } else {
+            properties[key] = value;
           }
-          properties[key] = value;
         }
+      }
+    }
+    // selector가 없고 callback만 있는 경우 (예: today)
+    else if (propertyRule.callback) {
+      const result = executeCallback(propertyRule.callback, "", doc);
+      if (key === 'tags' && Array.isArray(result)) {
+        properties[key] = [...(properties[key] || []), ...result];
+      } else if (typeof result === 'string') {
+        properties[key] = result;
       }
     }
   }
@@ -182,22 +75,18 @@ function extractProperties(doc: Document, rule: PatternRule, url: string): ClipP
   return properties;
 }
 
-function executeCallback(callbackName: string, value: string): string {
+function executeCallback(callbackName: string, value: string, doc?: Document): string | string[] {
   // callback 함수들을 여기에 구현
-  const callbacks: { [key: string]: (value: string) => string } = {
-    sanitizeFileName: (v: string) => v.replace(/[\\/:*?"<>|]/g, ""),
-    replaceHyphen: (v: string) => v.replace(/-/g, " "),
-    today: () => {
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, "0");
-      const day = String(now.getDate()).padStart(2, "0");
-      return `${year}-${month}-${day}`;
-    },
-    formatDate: (v: string) => {
-      return v;
-      // return v.split("T")[0];
-    },
+  const callbacks: { [key: string]: (value: string, doc?: Document) => string | string[] } = {
+    sanitizeName,
+    replaceHyphen,
+    today,
+    formatDate,
+    formatYoutubeDate,
+    decodeHtmlEntities,
+    extractHashtags,
+    extractYoutubeDescription,
+    extractYoutubeTags,
   };
 
   // callback이 today인 경우 value 파라미터 무시
@@ -205,67 +94,21 @@ function executeCallback(callbackName: string, value: string): string {
     return callbacks[callbackName]("");
   }
 
-  return callbacks[callbackName]?.(value) ?? value;
+  return callbacks[callbackName]?.(value, doc) ?? value;
 }
-
-// callback 함수 타입 정의
-type RedirectCallback = (doc: Document) => Promise<string | null>;
 
 // callback 함수 맵
 const redirectCallbacks: { [key: string]: RedirectCallback } = {
-  fetchWithRedirect_naverBlog: async (doc: Document): Promise<string | null> => {
-    const mainFrame = doc.querySelector("#mainFrame") as HTMLIFrameElement;
-    if (!mainFrame?.src) return null;
-
-    try {
-      const iframeSrc = mainFrame.src;
-      const url = new URL(iframeSrc.startsWith("//") ? `https:${iframeSrc}` : iframeSrc);
-
-      const blogId = url.searchParams.get("blogId");
-      const logNo = url.searchParams.get("logNo");
-
-      if (blogId && logNo) {
-        return `https://blog.naver.com/PostView.naver?blogId=${blogId}&logNo=${logNo}&redirect=Dlog&widgetTypeCall=true&directAccess=false`;
-      }
-
-      if (!url.href.startsWith("https://blog.naver.com")) {
-        const path = url.pathname + url.search;
-        return `https://blog.naver.com${path}`;
-      }
-
-      return url.href;
-    } catch (error) {
-      console.error("Error parsing iframe URL:", error);
-      const iframeSrc = mainFrame.src;
-      if (iframeSrc.startsWith("//")) return `https:${iframeSrc}`;
-      if (iframeSrc.startsWith("/")) return `https://blog.naver.com${iframeSrc}`;
-      if (!iframeSrc.startsWith("http")) return `https://blog.naver.com/${iframeSrc}`;
-      return iframeSrc;
-    }
-  },
+  fetchWithRedirect_naverBlog,
 };
 
 async function fetchWithRedirect(url: string, rule: PatternRule): Promise<Document> {
   console.log("Original URL:", url);
 
-  const response = await requestUrl({
-    url: url,
-    method: "GET",
-    headers: {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-    },
-  });
+  // 첫 번째 페이지 가져오기
+  const doc = await fetchSimple(url);
 
-  if (response.status !== 200) {
-    throw new Error(`HTTP error! status: ${response.status}`);
-  }
-
-  console.log("Original response status:", response.status);
-  console.log("Original response length:", response.text.length);
-
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(response.text, "text/html");
-
+  // 리다이렉트가 필요한 경우
   if (rule.fetchType === "fetchWithRedirect" && rule.callback) {
     const callback = redirectCallbacks[rule.callback];
     if (!callback) {
@@ -277,25 +120,8 @@ async function fetchWithRedirect(url: string, rule: PatternRule): Promise<Docume
 
     if (redirectUrl) {
       console.log("Fetching redirect URL:", redirectUrl);
-
-      const redirectResponse = await requestUrl({
-        url: redirectUrl,
-        method: "GET",
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-        },
-      });
-
-      console.log("Redirect response status:", redirectResponse.status);
-      console.log("Redirect response length:", redirectResponse.text.length);
-
-      if (redirectResponse.status !== 200) {
-        throw new Error(`HTTP error in redirect! status: ${redirectResponse.status}`);
-      }
-
-      const redirectDoc = parser.parseFromString(redirectResponse.text, "text/html");
-      console.log("Parsed document body length:", redirectDoc.body.innerHTML.length);
-      return redirectDoc;
+      // 리다이렉트된 페이지 가져오기
+      return await fetchSimple(redirectUrl);
     }
   }
 
@@ -309,12 +135,64 @@ function convertImageUrls(html: string, pattern: string): string {
   return html;
 }
 
-export async function fetchData(url: string): Promise<ClipData> {
+async function fetchSimple(url: string): Promise<Document> {
+  console.log("Fetching simple URL:", url);
+
+  const response = await requestUrl({
+    url: url,
+    method: "GET",
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+    },
+  });
+
+  if (response.status !== 200) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+  const parser = new DOMParser();
+  return parser.parseFromString(response.text, "text/html");
+}
+
+async function fetchByChrome(url: string, rule: PatternRule): Promise<Document> {
+  // TODO: Chrome 브라우저를 통한 페이지 로딩 구현
+  console.log("Chrome-based fetching not implemented yet");
+  throw new Error("Chrome-based fetching not implemented yet");
+}
+
+export async function fetchData(url: string, vault?: Vault): Promise<ClipData> {
   try {
     const rule = routeUrl(url);
     console.log("Selected rule pattern:", rule.pattern);
 
-    const doc = await fetchWithRedirect(url, rule);
+    let doc: Document;
+    switch (rule.fetchType) {
+      case "fetchSimple":
+        doc = await fetchSimple(url);
+        break;
+      case "fetchWithRedirect":
+        doc = await fetchWithRedirect(url, rule);
+        break;
+      case "fetchByChrome":
+        doc = await fetchByChrome(url, rule);
+        break;
+      default:
+        doc = await fetchSimple(url);
+    }
+
+    // YouTube 비디오인 경우 HTML 저장
+    if (rule.pattern === "youtube/video" && vault) {
+      const videoId = new URL(url).searchParams.get("v");
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const filename = `@youtube-video_${videoId}_${timestamp}.html`;
+      
+      // HTML 파일 저장
+      await vault.create(filename, doc.documentElement.outerHTML);
+      console.log(`Saved HTML to ${filename}`);
+    }
+
+    // 속성 추출 (불필요한 요소 제거 전에 실행)
+    const properties = extractProperties(doc, rule, url);
 
     // 불필요한 요소 제거
     if (rule.removeSelectors) {
@@ -334,30 +212,13 @@ export async function fetchData(url: string): Promise<ClipData> {
     }
     console.log("Final content length:", content.innerHTML.length);
 
-    // 속성 추출
-    const properties = extractProperties(doc, rule, url);
-    console.log("Extracted properties:", properties);
-
-    // 빈 값이 아닌 속성만 포함
-    const frontmatterProperties: ClipProperties = {
-      title: properties.title || "Untitled",
-      url: properties.url,
-      author: properties.author || "",
-      date: properties.date || "",
-      tags: properties.tags || [],
-      created: properties.created || "",
-    };
-
-    // 이미지 URL 변환
-    const convertedHtml = convertImageUrls(content.innerHTML, rule.pattern);
-
     return {
       pattern: rule.pattern,
-      properties: frontmatterProperties,
-      html: convertedHtml,
+      properties,
+      html: content.innerHTML,
     };
   } catch (error) {
-    console.error("Error fetching URL:", error);
+    console.error("Error fetching data:", error);
     throw error;
   }
 }

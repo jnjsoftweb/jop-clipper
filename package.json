@@ -4,9 +4,9 @@
   "description": "Obsidian plugin for JOP Clipper",
   "main": "dist/main.js",
   "scripts": {
-    "dev": "webpack --config webpack.config.js --watch && xcopy /E /Y dist \"D:\\Notes\\Obsidian\\liveSync\\dev\\.obsidian\\plugins\\jop-clipper\\\"",
-    "build": "webpack --config webpack.config.js --mode production && xcopy /E /Y dist \"D:\\Notes\\Obsidian\\liveSync\\dev\\.obsidian\\plugins\\jop-clipper\\\"",
-    "copy-to-vault": "xcopy /E /Y dist \"D:\\Notes\\Obsidian\\liveSync\\dev\\.obsidian\\plugins\\jop-clipper\\\""
+    "dev": "webpack --config webpack.config.js --watch && cp -R dist/* /Users/moon/JnJ-soft/Obsidian/liveSync/dev/.obsidian/plugins/jop-clipper/",
+    "build": "webpack --config webpack.config.js --mode production && cp -R dist/* /Users/moon/JnJ-soft/Obsidian/liveSync/dev/.obsidian/plugins/jop-clipper/",
+    "copy-to-vault": "cp -R dist/* /Users/moon/JnJ-soft/Obsidian/liveSync/dev/.obsidian/plugins/jop-clipper/"
   },
   "keywords": [
     "obsidian",
