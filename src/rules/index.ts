@@ -1,7 +1,7 @@
 import { PatternRule } from "../types";
 import { BlogTistoryRule } from "./blog-tistory";
 import { BlogNaverRule, fetchWithRedirect_naverBlog } from "./blog-naver";
-import { DefaultRule, DefaultProperties } from "./_default";
+import { DefaultRule, DefaultProperties } from "./web-default";
 import { YoutubeVideoRule } from "./youtube-video";
 
 const SETTINGS: PatternRule[] = [

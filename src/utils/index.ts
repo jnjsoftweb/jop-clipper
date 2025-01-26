@@ -1,5 +1,6 @@
 import { convertHtmlToMarkdown } from "./utils-markdown";
 import { replaceHtml_naver } from "./utils-html";
+import { getFilesInFolder } from './utils-obsidian';
 
 const sanitizeName = (name: string): string => {
   return name
@@ -111,4 +112,5 @@ export {
   extractYoutubeTags,
   convertHtmlToMarkdown, // markdown
   replaceHtml_naver, // html
+  getFilesInFolder,
 };

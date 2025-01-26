@@ -11,7 +11,7 @@ const DefaultProperties: ClipProperties = {
 };
 
 const DefaultRule: PatternRule = {
-  pattern: "webpage",
+  pattern: "web/default",
   urlPatterns: ["*"],
   fetchType: "fetchSimple",
   properties: {
@@ -33,7 +33,7 @@ const DefaultRule: PatternRule = {
       attribute: "content",
     },
     tags: {
-      value: ["clipping/webpage"],
+      value: ["clipping/web/default"],
     },
     created: {
       callback: "today",
