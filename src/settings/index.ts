@@ -14,24 +14,8 @@ export interface ClipperSettings {
 export const DEFAULT_SETTINGS: ClipperSettings = {
   apiKey: "",
   templates: {
-    "web-default": `
-> {{created}}
-
-{{content}}
-`,
-    "youtube-video": `
-> {{created}}
-
-> {{author}}
-
-![{{title}}]({{url}})
-
-## description
-{{description}}
-
-## transcript
-
-`
+    "web-default": `{{content}}`,
+    "youtube-video": `{{content}}`
   },
   defaultTemplate: "web-default",
   templateFolder: "93. templates/jop-clipper"

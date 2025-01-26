@@ -45,7 +45,7 @@ const BlogNaverRule: PatternRule = {
         selector: "meta[property='naverblog:nickname']",
         attribute: "content",
       },
-      date: {
+      published: {
         selector: ".date",
         attribute: "text",
       },
@@ -57,7 +57,7 @@ const BlogNaverRule: PatternRule = {
       tags: {
         value: ["clipping/blog/naver"],
       },
-      created: {
+      clipped: {
         callback: "today",
       },
   },
@@ -68,7 +68,7 @@ const BlogNaverRule: PatternRule = {
     ".revenue_unit_wrap",
     ".na_ad",
   ],
-  replaceHtml: "replaceHtml_naver"
+  postHtml: "postHtml_naver"
 };
 
 export {

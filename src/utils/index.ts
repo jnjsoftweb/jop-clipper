@@ -1,5 +1,5 @@
-import { convertHtmlToMarkdown } from "./utils-markdown";
-import { replaceHtml_naver } from "./utils-html";
+import { generateMarkdownBody, generateFrontmatter } from "./utils-markdown";
+import { postHtml_naver } from "./utils-html";
 import { getFilesInFolder } from './utils-obsidian';
 
 const sanitizeName = (name: string): string => {
@@ -110,7 +110,8 @@ export {
   extractHashtags,
   extractYoutubeDescription,
   extractYoutubeTags,
-  convertHtmlToMarkdown, // markdown
-  replaceHtml_naver, // html
+  generateFrontmatter,
+  generateMarkdownBody, // markdown
+  postHtml_naver, // html
   getFilesInFolder,
 };

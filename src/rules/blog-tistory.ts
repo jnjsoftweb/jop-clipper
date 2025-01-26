@@ -13,7 +13,7 @@ const BlogTistoryRule: PatternRule = {
       selector: "meta[name='by']",
       attribute: "content",
     },
-    date: {
+    published: {
       selector: "meta[property='article:published_time']",
       attribute: "content",
     },
@@ -24,7 +24,7 @@ const BlogTistoryRule: PatternRule = {
     tags: {
       value: ["clipping/blog/tistory"],
     },
-    created: {
+    clipped: {
       callback: "today",
     },
   },

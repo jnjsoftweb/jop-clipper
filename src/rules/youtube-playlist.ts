@@ -13,7 +13,7 @@ const YoutubePlaylistRule: PatternRule = {
       selector: "meta[name='by']",
       attribute: "content",
     },
-    date: {
+    published: {
       selector: "meta[property='article:published_time']",
       attribute: "content",
     },
@@ -24,7 +24,7 @@ const YoutubePlaylistRule: PatternRule = {
     tags: {
       value: ["clipping/youtube/playlist"],
     },
-    created: {
+    clipped: {
       callback: "today",
     },
   },

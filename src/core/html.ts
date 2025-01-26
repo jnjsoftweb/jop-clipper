@@ -1,5 +1,5 @@
 import { requestUrl, TFile, Vault } from "obsidian";
-import { SETTINGS, DefaultRule, DefaultProperties, fetchWithRedirect_naverBlog } from "../rules";
+import { SETTINGS, WebDefaultRule, DefaultProperties, fetchWithRedirect_naverBlog } from "../rules";
 import { PatternRule, PropertyRule, ClipProperties, ClipData, RedirectCallback } from "../types";
 import {
   sanitizeName,
@@ -11,15 +11,15 @@ import {
   extractHashtags,
   extractYoutubeDescription,
   extractYoutubeTags,
-  replaceHtml_naver,
+  postHtml_naver,
 } from "../utils";
 
 // HTML 대체 콜백 함수 타입 정의
-type ReplaceHtmlCallback = (html: string) => string;
+type postHtmlCallback = (html: string) => string;
 
 // HTML 대체 콜백 함수 맵
-const replaceHtmlCallbacks: { [key: string]: ReplaceHtmlCallback } = {
-  replaceHtml_naver,
+const postHtmlCallbacks: { [key: string]: postHtmlCallback } = {
+  postHtml_naver,
 };
 
 const routeUrl = (url: string): PatternRule => {
@@ -29,17 +29,17 @@ const routeUrl = (url: string): PatternRule => {
 
   for (const rule of SETTINGS) {
     console.log(`\n🔎 Checking rule: ${rule.pattern}`);
-    for (const pattern of rule.urlPatterns) {
-      console.log(`- Testing pattern "${pattern}" in URL:`, url.includes(pattern));
-      if (url.includes(pattern)) {
+    for (const urlPattern of rule.urlPatterns) {
+      console.log(`- Testing pattern "${urlPattern}" in URL:`, url.includes(urlPattern));
+      if (url.includes(urlPattern)) {
         console.log("✅ Match found! Using rule:", rule.pattern);
         return rule;
       }
     }
   }
 
-  console.log("⚠️ No matching rule found, using default");
-  return DefaultRule;
+  console.log("⚠️ No matching rule found, using default rule");
+  return WebDefaultRule;
 };
 
 const executeCallback = (callbackName: string, value: string, doc?: Document): string | string[] => {
@@ -227,14 +227,14 @@ const fetchData = async (url: string, vault?: Vault): Promise<ClipData> => {
 
     let html = content.innerHTML;
 
-    // console.log("#### ReplaceHtml callback:", rule.replaceHtml);
+    // console.log("#### postHtml callback:", rule.postHtml);
 
-    // replaceHtml 콜백이 있는 경우 실행
-    if (rule.replaceHtml) {
-      // console.log("#### ReplaceHtml callback:", rule.replaceHtml);
-      const callback = replaceHtmlCallbacks[rule.replaceHtml];
+    // postHtml 콜백이 있는 경우 실행
+    if (rule.postHtml) {
+      // console.log("#### postHtml callback:", rule.postHtml);
+      const callback = postHtmlCallbacks[rule.postHtml];
       if (!callback) {
-        throw new Error(`ReplaceHtml callback function ${rule.replaceHtml} not found`);
+        throw new Error(`postHtml callback function ${rule.postHtml} not found`);
       }
       html = callback(html);
     }

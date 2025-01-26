@@ -14,10 +14,13 @@ const YoutubeVideoRule: PatternRule = {
       selector: "link[itemprop='name']",
       attribute: "content",
     },
-    date: {
+    published: {
       selector: "meta[itemprop='datePublished']",
       attribute: "content",
       callback: "formatDate",
+    },
+    clipped: {
+      callback: "today",
     },
     description: {
       selector: "script",
@@ -29,13 +32,6 @@ const YoutubeVideoRule: PatternRule = {
       attribute: "text",
       callback: "extractYoutubeTags",
       value: ["clipping/youtube/video"],
-    },
-    created: {
-      callback: "today",
-    },
-    rawHtml: {
-      selector: "html",
-      attribute: "outerHTML",
     }
   },
   rootSelector: "#player",
@@ -46,6 +42,8 @@ const YoutubeVideoRule: PatternRule = {
     "#comments",
     "#related",
   ],
+  preFrontmatter: "preFrontmatter_youtube",
+  postMarkdown: "postMarkdown_youtube"
 }; 
 
 export {

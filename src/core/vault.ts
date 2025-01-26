@@ -1,33 +1,7 @@
 import { App, TFile } from "obsidian";
 import { ClipProperties } from "../types";
-
-const DEFAULT_TEMPLATE = `
-> {{created}}
-
-{{content}}
-`;
-
-const customTemplate = `
-> {{created}}
-
-![{{title}}]({{url}})
-
-{{content}}
-`;
-
-const applyTemplate = (template: string, properties: ClipProperties, content: string): string => {
-  let result = template;
-  
-  // properties의 모든 키에 대해 {{key}} 패턴을 해당 값으로 치환
-  Object.entries(properties).forEach(([key, value]) => {
-    result = result.replace(new RegExp(`{{${key}}}`, 'g'), value?.toString() || "");
-  });
-  
-  // {{content}}를 markdown 본문으로 치환
-  result = result.replace(/{{content}}/g, content);
-  
-  return result;
-};
+import { createMarkdown } from "./markdown";
+import { applyTemplate } from "../settings";
 
 const cleanMarkdown = (text: string): string => {
   return text
@@ -40,48 +14,27 @@ const cleanMarkdown = (text: string): string => {
 };
 
 const saveMarkdownToVault = async (
-  app: App, 
-  markdown: string, 
-  filename: string, 
-  folder: string = "",
-  properties?: ClipProperties,
-  template: string = DEFAULT_TEMPLATE
+  app: App,
+  pattern: string,
+  properties: ClipProperties,
+  html: string,
+  template: string
 ): Promise<TFile> => {
   try {
-    // 원본 내용 로깅
-    console.log("=== Original Content ===");
-    console.log(markdown.substring(0, 200));
-
-    // frontmatter와 content 분리
-    const [frontmatter, content] = markdown.split("---\n\n");
+    // 마크다운 생성
+    const markdown = await createMarkdown(pattern, properties, html);
     
-    // template 적용
-    const templatedContent = properties 
-      ? applyTemplate(template, properties, cleanMarkdown(content))
-      : cleanMarkdown(content);
+    // 템플릿 적용
+    const content = applyTemplate(template, properties, markdown);
     
-    // 최종 markdown 생성
-    const finalMarkdown = `${frontmatter}---\n\n${templatedContent}`;
-
-    // 정리된 내용 로깅
-    console.log("=== Cleaned Content ===");
-    console.log(finalMarkdown.substring(0, 200));
-
-    // 파일 경로 생성
-    const path = folder ? `${folder}/${filename}.md` : `${filename}.md`;
-
-    // 이미 존재하는 파일인지 확인
-    const existingFile = app.vault.getAbstractFileByPath(path);
-    if (existingFile) {
-      throw new Error(`File already exists: ${path}`);
-    }
-
-    // 새 파일 생성
-    const file = await app.vault.create(path, finalMarkdown);
-    console.log("File created:", path);
+    // 파일명 생성 (title 기반)
+    const fileName = `${properties.title}.md`;
+    
+    // 파일 저장
+    const file = await app.vault.create(fileName, content);
     return file;
   } catch (error) {
-    console.error("Error saving to vault:", error);
+    console.error("Error saving markdown to vault:", error);
     throw error;
   }
 };

@@ -105,26 +105,33 @@ export default class ClipperPlugin extends Plugin {
     }
   }
 
-  private async clipCurrentPage() {
+  async clipCurrentPage() {
     try {
+      // 클립보드에서 URL 가져오기
       const url = await navigator.clipboard.readText();
-      if (!url.startsWith("http")) {
-        throw new Error("Invalid URL in clipboard");
-      }
+      console.log("URL from clipboard:", url);
 
-      const { pattern, properties, html } = await fetchData(url, this.app.vault);
-      const markdown = createMarkdown(pattern, properties, html);
-      const filename = sanitizeName(properties.title);
+      // 데이터 가져오기
+      const data = await fetchData(url);
+      console.log("Fetched data:", data);
 
-      // 패턴에 맞는 템플릿 선택 또는 기본 템플릿 사용
-      const template = this.settings.templates[pattern] || this.settings.templates[this.settings.defaultTemplate];
+      // 템플릿 선택
+      const template = this.settings.templates[data.pattern] || this.settings.templates[this.settings.defaultTemplate];
 
-      await saveMarkdownToVault(this.app, markdown, filename, "Clippings", properties, template);
+      // 마크다운으로 저장
+      const file = await saveMarkdownToVault(
+        this.app,
+        data.pattern,
+        data.properties,
+        data.html,
+        template
+      );
 
-      new Notice("Page clipped successfully!");
+      // 성공 메시지
+      new Notice(`Saved to ${file.path}`);
     } catch (error) {
       console.error("Error clipping page:", error);
-      new Notice(`Failed to clip page: ${error.message}`);
+      new Notice("Failed to clip page. Check the console for details.");
     }
   }
 

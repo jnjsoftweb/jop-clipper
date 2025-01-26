@@ -15,17 +15,19 @@ export interface PatternRule {
   };
   rootSelector: string;
   removeSelectors?: string[];
-  replaceHtml?: string;
+  postHtml?: string;
+  postMarkdown?: string;
+  preFrontmatter?: string;
 }
 
 export interface ClipProperties {
   title: string;
   url: string;
   author: string;
-  date: string;
+  published: string;
+  clipped: string;
   description: string;
   tags: string[];
-  created: string;
   [key: string]: any;
 }
 

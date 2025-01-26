@@ -1,4 +1,6 @@
+// * source: /Users/moon/JnJ-soft/Projects/@extension/fork-obsidian-clipper/src/utils/obsidian-note-creator.ts
 import TurndownService from "turndown";
+import { escapeDoubleQuotes } from "./utils-string";
 
 const turndownConfig = {
   headingStyle: "atx",
@@ -73,7 +75,7 @@ turndownService.remove(['script', 'style', 'button']);
 // iframe, video, audio 등의 요소 유지
 turndownService.keep(['iframe', 'video', 'audio']);
 
-const convertHtmlToMarkdown = (html: string): string => {
+const generateMarkdownBody = (html: string): string => {
   try {
     let markdown = turndownService.turndown(html);
 
@@ -91,6 +93,45 @@ const convertHtmlToMarkdown = (html: string): string => {
 };
 
 
+// * frontmatter 생성
+const generateFrontmatter = (properties) => {
+  let frontmatter = '---\n';
+  
+  for (const [key, value] of Object.entries(properties)) {
+    frontmatter += `${key}:`;
+
+    if (Array.isArray(value)) {
+      frontmatter += '\n';
+      value.forEach(item => {
+        frontmatter += `  - "${escapeDoubleQuotes(String(item))}"\n`;
+      });
+    } else {
+      switch (typeof value) {
+        case 'number':
+          const numericValue = String(value).replace(/[^\d.-]/g, '');
+          frontmatter += numericValue ? ` ${parseFloat(numericValue)}\n` : '\n';
+          break;
+        case 'boolean':
+          frontmatter += ` ${value}\n`;
+          break;
+        case 'string':
+          if (value.trim() !== '') {
+            frontmatter += ` "${escapeDoubleQuotes(value)}"\n`;
+          } else {
+            frontmatter += '\n';
+          }
+          break;
+        default:
+          frontmatter += value ? ` "${escapeDoubleQuotes(String(value))}"\n` : '\n';
+      }
+    }
+  }
+  
+  frontmatter += '---\n';
+  
+  return frontmatter.trim() === '---\n---' ? '' : frontmatter;
+}
 export {
-  convertHtmlToMarkdown,
+  generateMarkdownBody,
+  generateFrontmatter
 };

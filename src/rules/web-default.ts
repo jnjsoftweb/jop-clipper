@@ -4,46 +4,60 @@ const DefaultProperties: ClipProperties = {
   title: "Untitled",
   url: "",
   author: "",
-  date: "",
+  published: "",
   description: "",
   tags: [],
-  created: "",
+  clipped: "",
 };
 
-const DefaultRule: PatternRule = {
-  pattern: "web/default",
-  urlPatterns: ["*"],
+const WebDefaultRule: PatternRule = {
+  pattern: "webpage",
+  urlPatterns: ["http://", "https://"],
   fetchType: "fetchSimple",
   properties: {
     title: {
       selector: "meta[property='og:title']",
       attribute: "content",
+      callback: "sanitizeName",
     },
-    author: {
-      selector: "meta[name='author']",
+    url: {
+      selector: "meta[property='og:url']",
       attribute: "content",
     },
-    date: {
+    author: {
+      selector: "meta[property='article:author']",
+      attribute: "content",
+      value: "Unknown",
+    },
+    published: {
       selector: "meta[property='article:published_time']",
       attribute: "content",
       callback: "formatDate",
+      value: "1970-01-01",
     },
     description: {
       selector: "meta[property='og:description']",
       attribute: "content",
+      value: "",
     },
     tags: {
-      value: ["clipping/web/default"],
+      value: ["clipping/webpage"],
     },
-    created: {
+    clipped: {
       callback: "today",
     },
   },
   rootSelector: "body",
-  removeSelectors: ["script", "style"],
+  removeSelectors: [
+    "script",
+    "style",
+    "nav",
+    "header",
+    "footer",
+  ],
 } as const;
 
 export {
   DefaultProperties,
-  DefaultRule,
+  WebDefaultRule,
 };

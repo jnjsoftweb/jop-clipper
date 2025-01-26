@@ -1,3 +1,1 @@
-> {{created}}
-
 {{content}}
