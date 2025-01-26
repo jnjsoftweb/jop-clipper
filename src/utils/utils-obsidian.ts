@@ -1,53 +1,12 @@
 import { App, TFile } from "obsidian";
 
 export const getFilesInFolder = async (app: App, folderPath: string) => {
-  console.log('Getting all files in vault');
-  
-  // vault 정보 출력
-  console.log('Vault info:', {
-    adapter: app.vault.adapter.getName(),
-    configDir: app.vault.configDir
-  });
-
-  try {
-    // adapter를 통해 파일 목록 가져오기
-    const files = await app.vault.adapter.list('');
-    console.log('Files from adapter:', files);
-    
-    // 파일 정보 출력
-    files.files.forEach(filePath => {
-      console.log('File path:', filePath);
-    });
-
-    // 폴더 정보 출력
-    files.folders.forEach(folderPath => {
-      console.log('Folder path:', folderPath);
-    });
-
-    return files;
-  } catch (error) {
-    console.error('Error getting files:', error);
-    return { files: [], folders: [] };
-  }
+  return await app.vault.adapter.list(folderPath);
 };
 
 // 재귀적으로 모든 파일 가져오기
-const getAllFiles = (folder: any): TFile[] => {
-  const files: TFile[] = [];
-  
-  if (!folder || !folder.children) {
-    return files;
-  }
-
-  folder.children.forEach((child: any) => {
-    if (child instanceof TFile) {
-      files.push(child);
-    } else {
-      files.push(...getAllFiles(child));
-    }
-  });
-
-  return files;
+const getAllFiles = async (app: App, folder: any) => {
+  return await app.vault.adapter.list('');
 };
 
 

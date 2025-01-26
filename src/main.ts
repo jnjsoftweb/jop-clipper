@@ -4,7 +4,7 @@ import { ClipperData } from "./data";
 import { fetchData } from "./core/html";
 import { createMarkdown } from "./core/markdown";
 import { saveMarkdownToVault } from "./core/vault";
-import { sanitizeName, getFilesInFolder } from "./utils";
+import { sanitizeName } from "./utils";
 import { 
   ClipperSettings, 
   DEFAULT_SETTINGS, 
@@ -23,7 +23,7 @@ export default class ClipperPlugin extends Plugin {
     this.data = new ClipperData();
 
     // 템플릿 폴더가 없으면 생성
-    await this.ensureTemplateFolder();
+    // await this.ensureTemplateFolder();
     // 템플릿 파일 로드
     await this.loadTemplateFiles();
 
@@ -52,88 +52,34 @@ export default class ClipperPlugin extends Plugin {
     this.addSettingTab(new ClipperSettingTab(this.app, this));
   }
 
-  async ensureTemplateFolder(): Promise<void> {
-    const folderPath = this.settings.templateFolder;
-    console.log("Ensuring template folder exists:", folderPath);
-    
-    // vault가 준비될 때까지 잠시 대기
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
-    const result = await getFilesInFolder(this.app, folderPath);
-    console.log("Files and folders in vault:", {
-      files: result.files.length,
-      folders: result.folders.length
-    });
-
-    try {
-      // 폴더 경로가 이미 존재하는지 확인
-      const exists = result.folders.includes(folderPath);
-      if (!exists) {
-        console.log("Creating template folder:", folderPath);
-        try {
-          await this.app.vault.adapter.mkdir(folderPath);
-          console.log("Template folder created successfully");
-        } catch (error) {
-          console.error("Error creating folder:", error);
-          throw error;
-        }
-      } else {
-        console.log("Template folder already exists");
-      }
-    } catch (error) {
-      console.error("Failed to create template folder:", error);
-      throw error;
-    }
-  }
 
   async loadTemplateFiles(): Promise<void> {
     try {
       const folderPath = this.settings.templateFolder;
       console.log("Loading templates from folder:", folderPath);
 
-      
       // 기존 템플릿 유지 (기본 템플릿)
       const defaultTemplates = DEFAULT_SETTINGS.templates;
       this.settings.templates = { ...defaultTemplates };
 
-      // 폴더 존재 여부 확인
-      const folder = this.app.vault.getAbstractFileByPath(folderPath);
-      if (!folder || !(folder instanceof TFolder)) {
-        console.log("Template folder not found or not a folder:", folderPath);
-        await this.ensureTemplateFolder();
-        return;
-      }
+      // adapter를 통해 폴더 내용 가져오기
+      const result = await this.app.vault.adapter.list(folderPath);
+      console.log("Template folder contents:", result);
 
-      // 폴더 내용 로깅
-      console.log("Template folder contents:", {
-        path: folder.path,
-        name: folder.name,
-        children: folder.children.map(child => ({
-          path: child.path,
-          name: child.name,
-          type: child instanceof TFolder ? "folder" : "file",
-          extension: child instanceof TFile ? child.extension : undefined
-        }))
-      });
+      // 템플릿 파일 찾기 (마크다운 파일만, '_'로 시작하지 않는 파일)
+      const templateFiles = result.files
+        .filter(file => file.endsWith('.md') && !file.split('/').pop()?.startsWith('_'))
+        .map(file => ({
+          path: file,
+          name: file.split('/').pop() || ''
+        }));
 
-      // 템플릿 파일 찾기 (폴더의 직접적인 자식 파일들만)
-      const templateFiles = folder.children
-        .filter(child => 
-          child instanceof TFile && 
-          child.extension === 'md' && 
-          !child.name.startsWith('_')
-        ) as TFile[];
-
-      console.log("Template files found:", templateFiles.map(f => ({
-        path: f.path,
-        name: f.name,
-        extension: f.extension
-      })));
+      console.log("Template files found:", templateFiles);
 
       // 폴더에서 찾은 템플릿 추가
       for (const file of templateFiles) {
-        const content = await this.app.vault.read(file);
-        const templateName = file.basename;
+        const content = await this.app.vault.adapter.read(file.path);
+        const templateName = file.name.replace('.md', '');
         this.settings.templates[templateName] = content;
         console.log("Loaded template:", templateName);
       }
@@ -227,8 +173,30 @@ export default class ClipperPlugin extends Plugin {
       throw new Error("Template name cannot start with '_'");
     }
     
-    await this.saveTemplateFile(templateName, content);
-    this.settings.templates[templateName] = content;
-    await this.saveSettings();
+    try {
+      // 1. 파일 시스템에 템플릿 파일 저장
+      const folderPath = this.settings.templateFolder;
+      const filePath = `${folderPath}/${templateName}.md`;
+      await this.app.vault.adapter.write(filePath, content);
+      console.log("Template file saved to:", filePath);
+
+      // 2. 설정에 템플릿 추가
+      this.settings.templates[templateName] = content;
+      await this.saveSettings();
+      
+      // 3. Vault 새로고침
+      // @ts-ignore: index 프로퍼티가 private이지만 필요한 경우 사용
+      await this.app.vault.adapter.index?.indexAll();
+      console.log("Vault refreshed");
+      
+      console.log("Template added successfully:", {
+        name: templateName,
+        path: filePath,
+        content: content
+      });
+    } catch (error) {
+      console.error("Failed to add template:", error);
+      throw error;
+    }
   }
 }

@@ -34,7 +34,7 @@ export const DEFAULT_SETTINGS: ClipperSettings = {
 `
   },
   defaultTemplate: "web-default",
-  templateFolder: "93_templates/jop-clipper"
+  templateFolder: "93. templates/jop-clipper"
 };
 
 export const applyTemplate = (template: string, properties: ClipProperties, content: string): string => {
@@ -86,7 +86,6 @@ export class ClipperSettingTab extends PluginSettingTab {
           .setValue(this.plugin.settings.templateFolder)
           .onChange(async (value) => {
             this.plugin.settings.templateFolder = value;
-            await this.plugin.ensureTemplateFolder();
             await this.plugin.loadTemplateFiles();
             await this.plugin.saveSettings();
           })
