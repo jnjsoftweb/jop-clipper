@@ -1,4 +1,5 @@
-import TurndownService from "turndown";
+// import { convertHtmlToMarkdown } from "../utils/converter";
+import { convertHtmlToMarkdown } from "../utils";
 
 interface ClipProperties {
   title: string;
@@ -10,15 +11,7 @@ interface ClipProperties {
   [key: string]: any;
 }
 
-const turndownService = new TurndownService({
-  headingStyle: "atx",
-  hr: "---",
-  bulletListMarker: "-",
-  codeBlockStyle: "fenced",
-  emDelimiter: "*",
-});
-
-function createFrontMatter(properties: ClipProperties): string {
+const createFrontMatter = (properties: ClipProperties): string => {
   const frontMatter = ["---"];
 
   // 필수 속성들을 순서대로 추가
@@ -46,10 +39,10 @@ function createFrontMatter(properties: ClipProperties): string {
 
   frontMatter.push("---", "", "");
   return frontMatter.join("\n");
-}
+};
 
-function createYoutubeMarkdown(properties: ClipProperties, html: string): string {
-  const markdown = turndownService.turndown(html);
+const createYoutubeMarkdown = (properties: ClipProperties, html: string): string => {
+  const markdown = convertHtmlToMarkdown(html);
   const frontMatter = createFrontMatter(properties);
 
   // YouTube 영상 임베드 추가
@@ -57,26 +50,26 @@ function createYoutubeMarkdown(properties: ClipProperties, html: string): string
   const embed = videoId ? `\n![[${videoId}]]\n` : "";
 
   return frontMatter + embed + markdown;
-}
+};
 
-function createTistoryMarkdown(properties: ClipProperties, html: string): string {
-  const markdown = turndownService.turndown(html);
+const createTistoryMarkdown = (properties: ClipProperties, html: string): string => {
+  const markdown = convertHtmlToMarkdown(html);
   const frontMatter = createFrontMatter(properties);
   return frontMatter + markdown;
-}
+};
 
-function createDefaultMarkdown(properties: ClipProperties, html: string): string {
-  const markdown = turndownService.turndown(html);
+const createDefaultMarkdown = (properties: ClipProperties, html: string): string => {
+  const markdown = convertHtmlToMarkdown(html);
   const frontMatter = createFrontMatter(properties);
   return frontMatter + markdown;
-}
+};
 
-export function createMarkdown(pattern: string, properties: ClipProperties, html: string): string {
+const createMarkdown = (pattern: string, properties: ClipProperties, html: string): string => {
   try {
     switch (pattern) {
-      case "youtube":
+      case "youtube/video":
         return createYoutubeMarkdown(properties, html);
-      case "tistory":
+      case "blog/tistory":
         return createTistoryMarkdown(properties, html);
       default:
         return createDefaultMarkdown(properties, html);
@@ -85,17 +78,14 @@ export function createMarkdown(pattern: string, properties: ClipProperties, html
     console.error("Error converting to Markdown:", error);
     throw error;
   }
-}
+};
 
 /**
  * HTML을 Markdown으로 변환하는 함수
  */
-export function convHtmlToMarkdown(html: string): string {
-  try {
-    const markdown = turndownService.turndown(html);
-    return markdown;
-  } catch (error) {
-    console.error("Error converting HTML to Markdown:", error);
-    throw error;
-  }
-}
+const convHtmlToMarkdown = (html: string): string => convertHtmlToMarkdown(html);
+
+export {
+  createMarkdown,
+  convHtmlToMarkdown,
+};

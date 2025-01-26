@@ -1,6 +1,6 @@
 import { PatternRule, ClipProperties } from "../types";
 
-export const DefaultProperties: ClipProperties = {
+const DefaultProperties: ClipProperties = {
   title: "Untitled",
   url: "",
   author: "",
@@ -10,34 +10,40 @@ export const DefaultProperties: ClipProperties = {
   created: "",
 };
 
-export const DefaultRule: PatternRule = {
+const DefaultRule: PatternRule = {
   pattern: "webpage",
   urlPatterns: ["*"],
   fetchType: "fetchSimple",
   properties: {
     title: {
-        selector: "title",
-        attribute: "text",
+      selector: "meta[property='og:title']",
+      attribute: "content",
     },
     author: {
-        selector: "meta[name='by']",
-        attribute: "content",
+      selector: "meta[name='author']",
+      attribute: "content",
     },
     date: {
-        selector: "meta[name='date']",
-        attribute: "content",
+      selector: "meta[property='article:published_time']",
+      attribute: "content",
+      callback: "formatDate",
     },
     description: {
-        selector: "meta[name='description']",
-        attribute: "content",
+      selector: "meta[property='og:description']",
+      attribute: "content",
     },
     tags: {
-      value: ["clipping/web"],
+      value: ["clipping/webpage"],
     },
     created: {
       callback: "today",
     },
   },
   rootSelector: "body",
-  removeSelectors: ["script", "style", "header", "footer", "nav"],
+  removeSelectors: ["script", "style"],
+} as const;
+
+export {
+  DefaultProperties,
+  DefaultRule,
 };

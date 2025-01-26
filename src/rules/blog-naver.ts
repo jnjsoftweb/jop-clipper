@@ -1,6 +1,6 @@
 import { PatternRule } from "../types";
 
-export const fetchWithRedirect_naverBlog = async (doc: Document): Promise<string | null> => {
+const fetchWithRedirect_naverBlog = async (doc: Document): Promise<string | null> => {
   const mainFrame = doc.querySelector("#mainFrame") as HTMLIFrameElement;
   if (!mainFrame?.src) return null;
 
@@ -31,7 +31,7 @@ export const fetchWithRedirect_naverBlog = async (doc: Document): Promise<string
   }
 };
 
-export const BlogNaverRule: PatternRule = {
+const BlogNaverRule: PatternRule = {
   pattern: "blog/naver",
   urlPatterns: ["blog.naver.com"],
   fetchType: "fetchWithRedirect",
@@ -46,8 +46,8 @@ export const BlogNaverRule: PatternRule = {
         attribute: "content",
       },
       date: {
-        selector: "meta[property='article:published_time']",
-        attribute: "content",
+        selector: ".date",
+        attribute: "text",
       },
       description: {
         selector: "meta[property='og:description']",
@@ -67,13 +67,12 @@ export const BlogNaverRule: PatternRule = {
     "style",
     ".revenue_unit_wrap",
     ".na_ad",
-    ".naver-splugin",
-    ".area_reply",
-    "#comments",
-    ".area_related_post",
-    ".area_paging",
-    ".area_paging_simple",
-    ".area_paging_simple_wrap",
   ],
+  replaceHtml: "replaceHtml_naver"
+};
+
+export {
+  fetchWithRedirect_naverBlog,
+  BlogNaverRule,
 }; 
 

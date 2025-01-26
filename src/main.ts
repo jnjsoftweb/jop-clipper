@@ -1,16 +1,38 @@
-import { App, Plugin, PluginSettingTab, Setting, Command, MarkdownView, Notice } from "obsidian";
+import { App, Plugin, PluginSettingTab, Setting, Command, MarkdownView, Notice, TFile } from "obsidian";
 import "./styles.css";
 import { ClipperData } from "./data";
 import { fetchData } from "./core/html";
 import { createMarkdown } from "./core/markdown";
 import { saveMarkdownToVault } from "./core/vault";
 import { sanitizeName } from "./utils";
+import { ClipProperties } from "./types";
+
 interface ClipperSettings {
   apiKey: string;
 }
 
 const DEFAULT_SETTINGS: ClipperSettings = {
   apiKey: "",
+};
+
+const DEFAULT_TEMPLATE = `
+> {{created}}
+
+{{content}}
+`;
+
+const applyTemplate = (template: string, properties: ClipProperties, content: string): string => {
+  let result = template;
+  
+  // properties의 모든 키에 대해 {{key}} 패턴을 해당 값으로 치환
+  Object.entries(properties).forEach(([key, value]) => {
+    result = result.replace(new RegExp(`{{${key}}}`, 'g'), value?.toString() || "");
+  });
+  
+  // {{content}}를 markdown 본문으로 치환
+  result = result.replace(/{{content}}/g, content);
+  
+  return result;
 };
 
 export default class ClipperPlugin extends Plugin {
@@ -66,7 +88,7 @@ export default class ClipperPlugin extends Plugin {
       const filename = sanitizeName(properties.title);
 
       // Markdown을 볼트에 저장
-      await saveMarkdownToVault(this.app, markdown, filename, "Clippings");
+      await saveMarkdownToVault(this.app, markdown, filename, "Clippings", properties, DEFAULT_TEMPLATE);
 
       // 성공 메시지 표시
       new Notice("Page clipped successfully!");

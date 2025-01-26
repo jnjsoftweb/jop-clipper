@@ -1,8 +1,8 @@
 import { PatternRule } from "../types";
 
-export const YoutubeVideoRule: PatternRule = {
+const YoutubeVideoRule: PatternRule = {
   pattern: "youtube/video",
-  urlPatterns: ["youtube.com", "youtu.be"],
+  urlPatterns: ["youtube.com/watch", "youtu.be"],
   fetchType: "fetchSimple",
   properties: {
     title: {
@@ -46,4 +46,8 @@ export const YoutubeVideoRule: PatternRule = {
     "#comments",
     "#related",
   ],
+}; 
+
+export {
+  YoutubeVideoRule,
 }; 

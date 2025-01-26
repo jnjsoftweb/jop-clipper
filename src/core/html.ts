@@ -1,6 +1,5 @@
 import { requestUrl, TFile, Vault } from "obsidian";
-import { SETTINGS, DefaultRule, DefaultProperties } from "../rules";
-import { fetchWithRedirect_naverBlog } from "../rules/blog-naver";
+import { SETTINGS, DefaultRule, DefaultProperties, fetchWithRedirect_naverBlog } from "../rules";
 import { PatternRule, PropertyRule, ClipProperties, ClipData, RedirectCallback } from "../types";
 import {
   sanitizeName,
@@ -12,71 +11,38 @@ import {
   extractHashtags,
   extractYoutubeDescription,
   extractYoutubeTags,
+  replaceHtml_naver,
 } from "../utils";
 
-function routeUrl(url: string): PatternRule {
-  const hostname = new URL(url).hostname;
+// HTML 대체 콜백 함수 타입 정의
+type ReplaceHtmlCallback = (html: string) => string;
+
+// HTML 대체 콜백 함수 맵
+const replaceHtmlCallbacks: { [key: string]: ReplaceHtmlCallback } = {
+  replaceHtml_naver,
+};
+
+const routeUrl = (url: string): PatternRule => {
+  console.log("🔍🔍🔍 ROUTE URL FUNCTION STARTED 🔍🔍🔍");
+  console.log("📌 Input URL:", url);
+  console.log("📋 Available rules:", SETTINGS.map(rule => rule.pattern));
 
   for (const rule of SETTINGS) {
-    if (rule.urlPatterns.some((pattern) => hostname.includes(pattern))) {
-      return rule;
+    console.log(`\n🔎 Checking rule: ${rule.pattern}`);
+    for (const pattern of rule.urlPatterns) {
+      console.log(`- Testing pattern "${pattern}" in URL:`, url.includes(pattern));
+      if (url.includes(pattern)) {
+        console.log("✅ Match found! Using rule:", rule.pattern);
+        return rule;
+      }
     }
   }
 
-  // 기본 규칙
+  console.log("⚠️ No matching rule found, using default");
   return DefaultRule;
-}
+};
 
-function extractProperties(doc: Document, rule: PatternRule, url: string): ClipProperties {
-  const properties: ClipProperties = {
-    ...DefaultProperties,
-    url: url,
-  };
-
-  // 각 속성 추출
-  for (const [key, propertyRule] of Object.entries(rule.properties)) {
-    // value가 있는 경우 직접 값 사용
-    if (propertyRule.value !== undefined) {
-      properties[key] = propertyRule.value;
-    }
-
-    // selector가 있는 경우 DOM에서 값 추출
-    if (propertyRule.selector) {
-      const element = doc.querySelector(propertyRule.selector);
-      if (element) {
-        let value = propertyRule.attribute === "text" ? element.textContent : element.getAttribute(propertyRule.attribute || "");
-        if (value) {
-          value = value.trim();
-          // callback 함수가 있다면 실행
-          if (propertyRule.callback) {
-            const result = executeCallback(propertyRule.callback, value, doc);
-            if (key === 'tags' && Array.isArray(result)) {
-              properties[key] = [...(properties[key] || []), ...result];
-            } else if (typeof result === 'string') {
-              properties[key] = result;
-            }
-          } else {
-            properties[key] = value;
-          }
-        }
-      }
-    }
-    // selector가 없고 callback만 있는 경우 (예: today)
-    else if (propertyRule.callback) {
-      const result = executeCallback(propertyRule.callback, "", doc);
-      if (key === 'tags' && Array.isArray(result)) {
-        properties[key] = [...(properties[key] || []), ...result];
-      } else if (typeof result === 'string') {
-        properties[key] = result;
-      }
-    }
-  }
-
-  return properties;
-}
-
-function executeCallback(callbackName: string, value: string, doc?: Document): string | string[] {
-  // callback 함수들을 여기에 구현
+const executeCallback = (callbackName: string, value: string, doc?: Document): string | string[] => {
   const callbacks: { [key: string]: (value: string, doc?: Document) => string | string[] } = {
     sanitizeName,
     replaceHyphen,
@@ -89,20 +55,20 @@ function executeCallback(callbackName: string, value: string, doc?: Document): s
     extractYoutubeTags,
   };
 
-  // callback이 today인 경우 value 파라미터 무시
+  // today 함수는 파라미터가 필요 없음
   if (callbackName === "today") {
-    return callbacks[callbackName]("");
+    return today();
   }
 
   return callbacks[callbackName]?.(value, doc) ?? value;
-}
+};
 
 // callback 함수 맵
 const redirectCallbacks: { [key: string]: RedirectCallback } = {
   fetchWithRedirect_naverBlog,
 };
 
-async function fetchWithRedirect(url: string, rule: PatternRule): Promise<Document> {
+const fetchWithRedirect = async (url: string, rule: PatternRule): Promise<Document> => {
   console.log("Original URL:", url);
 
   // 첫 번째 페이지 가져오기
@@ -126,16 +92,9 @@ async function fetchWithRedirect(url: string, rule: PatternRule): Promise<Docume
   }
 
   return doc;
-}
+};
 
-function convertImageUrls(html: string, pattern: string): string {
-  if (pattern === "blog/naver") {
-    return html.replace(/\?type=w\d+_blur/g, "?type=w966");
-  }
-  return html;
-}
-
-async function fetchSimple(url: string): Promise<Document> {
+const fetchSimple = async (url: string): Promise<Document> => {
   console.log("Fetching simple URL:", url);
 
   const response = await requestUrl({
@@ -152,18 +111,72 @@ async function fetchSimple(url: string): Promise<Document> {
 
   const parser = new DOMParser();
   return parser.parseFromString(response.text, "text/html");
-}
+};
 
-async function fetchByChrome(url: string, rule: PatternRule): Promise<Document> {
+const fetchByChrome = async (url: string, rule: PatternRule): Promise<Document> => {
   // TODO: Chrome 브라우저를 통한 페이지 로딩 구현
   console.log("Chrome-based fetching not implemented yet");
   throw new Error("Chrome-based fetching not implemented yet");
-}
+};
 
-export async function fetchData(url: string, vault?: Vault): Promise<ClipData> {
+const extractProperties = (doc: Document, rule: PatternRule, url: string): ClipProperties => {
+  const properties: ClipProperties = {
+    ...DefaultProperties,
+    url: url,
+  };
+
+  // 각 속성 추출
+  for (const [key, propertyRule] of Object.entries(rule.properties)) {
+    const { selector, attribute = "text", callback, value } = propertyRule;
+
+    // value가 있는 경우 직접 값 사용
+    if (value !== undefined) {
+      properties[key] = value;
+    }
+
+    // selector가 있는 경우 DOM에서 값 추출
+    if (selector) {
+      const elements = doc.querySelectorAll(selector);
+      if (elements.length > 0) {
+        let result: string | string[];
+
+        if (attribute === "text") {
+          result = Array.from(elements).map((el) => el.textContent?.trim() || "");
+        } else {
+          result = Array.from(elements).map((el) => el.getAttribute(attribute) || "");
+        }
+
+        if (!Array.isArray(properties[key])) {
+          result = result[0];
+        }
+
+        if (callback) {
+          result = executeCallback(callback, result as string, doc);
+        }
+
+        if (Array.isArray(properties[key]) && Array.isArray(result)) {
+          properties[key] = [...properties[key], ...result];
+        } else {
+          properties[key] = result;
+        }
+      }
+    }
+    // selector가 없고 callback만 있는 경우 (예: today)
+    else if (callback) {
+      const result = executeCallback(callback, "", doc);
+      properties[key] = result;
+    }
+  }
+
+  return properties;
+};
+
+const fetchData = async (url: string, vault?: Vault): Promise<ClipData> => {
   try {
+    console.log("\n=== fetchData Start ===");   
     const rule = routeUrl(url);
-    console.log("Selected rule pattern:", rule.pattern);
+    console.log("\n=== Rule Selection Result ===");
+    console.log("Selected pattern:", rule.pattern);
 
     let doc: Document;
     switch (rule.fetchType) {
@@ -212,13 +225,37 @@ export async function fetchData(url: string, vault?: Vault): Promise<ClipData> {
     }
     console.log("Final content length:", content.innerHTML.length);
 
+    let html = content.innerHTML;
+
+    // console.log("#### ReplaceHtml callback:", rule.replaceHtml);
+
+    // replaceHtml 콜백이 있는 경우 실행
+    if (rule.replaceHtml) {
+      // console.log("#### ReplaceHtml callback:", rule.replaceHtml);
+      const callback = replaceHtmlCallbacks[rule.replaceHtml];
+      if (!callback) {
+        throw new Error(`ReplaceHtml callback function ${rule.replaceHtml} not found`);
+      }
+      html = callback(html);
+    }
+
     return {
       pattern: rule.pattern,
       properties,
-      html: content.innerHTML,
+      html,
     };
   } catch (error) {
     console.error("Error fetching data:", error);
     throw error;
   }
-}
+};
+
+export {
+  routeUrl,
+  executeCallback,
+  fetchWithRedirect,
+  fetchSimple,
+  fetchByChrome,
+  extractProperties,
+  fetchData,
+};

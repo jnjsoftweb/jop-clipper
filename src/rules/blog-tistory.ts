@@ -1,6 +1,6 @@
 import { PatternRule } from "../types";
 
-export const BlogTistoryRule: PatternRule = {
+const BlogTistoryRule: PatternRule = {
   pattern: "blog/tistory",
   urlPatterns: ["tistory.com"],
   fetchType: "fetchSimple",
@@ -30,4 +30,8 @@ export const BlogTistoryRule: PatternRule = {
   },
   rootSelector: ".tt_article_useless_p_margin",
   removeSelectors: ["script", "style"],
+}; 
+
+export {
+  BlogTistoryRule,
 }; 

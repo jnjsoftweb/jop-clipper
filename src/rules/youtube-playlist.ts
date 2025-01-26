@@ -1,7 +1,7 @@
 import { PatternRule } from "../types";
 
-export const BlogTistoryRule: PatternRule = {
-  pattern: "youtube/video",
+const YoutubePlaylistRule: PatternRule = {
+  pattern: "youtube/playlist",
   urlPatterns: ["youtube.com/playlist"],
   fetchType: "fetchSimple",
   properties: {
@@ -22,7 +22,7 @@ export const BlogTistoryRule: PatternRule = {
       attribute: "content",
     },
     tags: {
-      value: ["clipping/youtube/video"],
+      value: ["clipping/youtube/playlist"],
     },
     created: {
       callback: "today",
@@ -30,4 +30,8 @@ export const BlogTistoryRule: PatternRule = {
   },
   rootSelector: ".tt_article_useless_p_margin",
   removeSelectors: ["script", "style"],
+} as const;
+
+export {
+  YoutubePlaylistRule,
 }; 

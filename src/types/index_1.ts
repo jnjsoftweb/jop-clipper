@@ -10,23 +10,21 @@ export interface PatternRule {
   urlPatterns: string[];
   fetchType: "fetchSimple" | "fetchWithRedirect" | "fetchByChrome";
   callback?: string;
-  properties: {
-    [key: string]: PropertyRule;
-  };
+  properties: Record<string, PropertyRule>;
   rootSelector: string;
-  removeSelectors?: string[];
+  removeSelectors: string[];
   replaceHtml?: string;
 }
 
 export interface ClipProperties {
   title: string;
   url: string;
-  author: string;
-  date: string;
-  description: string;
-  tags: string[];
-  created: string;
-  [key: string]: any;
+  author?: string;
+  date?: string;
+  created?: string;
+  tags?: string[];
+  description?: string;
+  [key: string]: string | string[] | undefined;
 }
 
 export interface ClipData {
