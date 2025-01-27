@@ -8,10 +8,7 @@
     "build": "webpack --config webpack.config.js --mode production && xcopy /E /Y dist \"D:\\Notes\\Obsidian\\liveSync\\dev\\.obsidian\\plugins\\jop-clipper\\\"",
     "copy-to-vault": "xcopy /E /Y dist \"D:\\Notes\\Obsidian\\liveSync\\dev\\.obsidian\\plugins\\jop-clipper\\\""
   },
-  "keywords": [
-    "obsidian",
-    "plugin"
-  ],
+  "keywords": ["obsidian", "plugin"],
   "author": "",
   "license": "MIT",
   "devDependencies": {

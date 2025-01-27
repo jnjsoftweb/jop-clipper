@@ -1,6 +1,14 @@
-import { requestUrl, TFile, Vault } from "obsidian";
-import { SETTINGS, WebDefaultRule, DefaultProperties, fetchWithRedirect_naverBlog } from "../rules";
-import { PatternRule, PropertyRule, ClipProperties, ClipData, RedirectCallback } from "../types";
+import { requestUrl, TFile, Vault } from 'obsidian';
+import {
+  SETTINGS,
+  WebDefaultRule,
+  DefaultProperties,
+  fetchWithRedirect_naverBlog,
+  postHtml_naver,
+  extractYoutubeDescription,
+  extractYoutubeTags,
+} from '../rules';
+import { PatternRule, PropertyRule, ClipProperties, ClipData, RedirectCallback } from '../types';
 import {
   sanitizeName,
   replaceHyphen,
@@ -9,10 +17,7 @@ import {
   formatYoutubeDate,
   decodeHtmlEntities,
   extractHashtags,
-  extractYoutubeDescription,
-  extractYoutubeTags,
-  postHtml_naver,
-} from "../utils";
+} from '../utils';
 
 // HTML 대체 콜백 함수 타입 정의
 type postHtmlCallback = (html: string) => string;
@@ -23,22 +28,25 @@ const postHtmlCallbacks: { [key: string]: postHtmlCallback } = {
 };
 
 const routeUrl = (url: string): PatternRule => {
-  console.log("🔍🔍🔍 ROUTE URL FUNCTION STARTED 🔍🔍🔍");
-  console.log("📌 Input URL:", url);
-  console.log("📋 Available rules:", SETTINGS.map(rule => rule.pattern));
+  console.log('🔍🔍🔍 ROUTE URL FUNCTION STARTED 🔍🔍🔍');
+  console.log('📌 Input URL:', url);
+  console.log(
+    '📋 Available rules:',
+    SETTINGS.map((rule) => rule.pattern)
+  );
 
   for (const rule of SETTINGS) {
     console.log(`\n🔎 Checking rule: ${rule.pattern}`);
     for (const urlPattern of rule.urlPatterns) {
       console.log(`- Testing pattern "${urlPattern}" in URL:`, url.includes(urlPattern));
       if (url.includes(urlPattern)) {
-        console.log("✅ Match found! Using rule:", rule.pattern);
+        console.log('✅ Match found! Using rule:', rule.pattern);
         return rule;
       }
     }
   }
 
-  console.log("⚠️ No matching rule found, using default rule");
+  console.log('⚠️ No matching rule found, using default rule');
   return WebDefaultRule;
 };
 
@@ -56,7 +64,7 @@ const executeCallback = (callbackName: string, value: string, doc?: Document): s
   };
 
   // today 함수는 파라미터가 필요 없음
-  if (callbackName === "today") {
+  if (callbackName === 'today') {
     return today();
   }
 
@@ -69,23 +77,23 @@ const redirectCallbacks: { [key: string]: RedirectCallback } = {
 };
 
 const fetchWithRedirect = async (url: string, rule: PatternRule): Promise<Document> => {
-  console.log("Original URL:", url);
+  console.log('Original URL:', url);
 
   // 첫 번째 페이지 가져오기
   const doc = await fetchSimple(url);
 
   // 리다이렉트가 필요한 경우
-  if (rule.fetchType === "fetchWithRedirect" && rule.callback) {
+  if (rule.fetchType === 'fetchWithRedirect' && rule.callback) {
     const callback = redirectCallbacks[rule.callback];
     if (!callback) {
       throw new Error(`Callback function ${rule.callback} not found`);
     }
 
     const redirectUrl = await callback(doc);
-    console.log("Redirect URL:", redirectUrl);
+    console.log('Redirect URL:', redirectUrl);
 
     if (redirectUrl) {
-      console.log("Fetching redirect URL:", redirectUrl);
+      console.log('Fetching redirect URL:', redirectUrl);
       // 리다이렉트된 페이지 가져오기
       return await fetchSimple(redirectUrl);
     }
@@ -95,13 +103,14 @@ const fetchWithRedirect = async (url: string, rule: PatternRule): Promise<Docume
 };
 
 const fetchSimple = async (url: string): Promise<Document> => {
-  console.log("Fetching simple URL:", url);
+  console.log('Fetching simple URL:', url);
 
   const response = await requestUrl({
     url: url,
-    method: "GET",
+    method: 'GET',
     headers: {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+      'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
     },
   });
 
@@ -110,13 +119,13 @@ const fetchSimple = async (url: string): Promise<Document> => {
   }
 
   const parser = new DOMParser();
-  return parser.parseFromString(response.text, "text/html");
+  return parser.parseFromString(response.text, 'text/html');
 };
 
 const fetchByChrome = async (url: string, rule: PatternRule): Promise<Document> => {
   // TODO: Chrome 브라우저를 통한 페이지 로딩 구현
-  console.log("Chrome-based fetching not implemented yet");
-  throw new Error("Chrome-based fetching not implemented yet");
+  console.log('Chrome-based fetching not implemented yet');
+  throw new Error('Chrome-based fetching not implemented yet');
 };
 
 const extractProperties = (doc: Document, rule: PatternRule, url: string): ClipProperties => {
@@ -127,7 +136,7 @@ const extractProperties = (doc: Document, rule: PatternRule, url: string): ClipP
 
   // 각 속성 추출
   for (const [key, propertyRule] of Object.entries(rule.properties)) {
-    const { selector, attribute = "text", callback, value } = propertyRule;
+    const { selector, attribute = 'text', callback, value } = propertyRule;
 
     // value가 있는 경우 직접 값 사용
     if (value !== undefined) {
@@ -140,10 +149,10 @@ const extractProperties = (doc: Document, rule: PatternRule, url: string): ClipP
       if (elements.length > 0) {
         let result: string | string[];
 
-        if (attribute === "text") {
-          result = Array.from(elements).map((el) => el.textContent?.trim() || "");
+        if (attribute === 'text') {
+          result = Array.from(elements).map((el) => el.textContent?.trim() || '');
         } else {
-          result = Array.from(elements).map((el) => el.getAttribute(attribute) || "");
+          result = Array.from(elements).map((el) => el.getAttribute(attribute) || '');
         }
 
         if (!Array.isArray(properties[key])) {
@@ -163,7 +172,7 @@ const extractProperties = (doc: Document, rule: PatternRule, url: string): ClipP
     }
     // selector가 없고 callback만 있는 경우 (예: today)
     else if (callback) {
-      const result = executeCallback(callback, "", doc);
+      const result = executeCallback(callback, '', doc);
       properties[key] = result;
     }
   }
@@ -173,36 +182,36 @@ const extractProperties = (doc: Document, rule: PatternRule, url: string): ClipP
 
 const fetchData = async (url: string, vault?: Vault): Promise<ClipData> => {
   try {
-    console.log("\n=== fetchData Start ===");   
+    console.log('\n=== fetchData Start ===');
     const rule = routeUrl(url);
-    console.log("\n=== Rule Selection Result ===");
-    console.log("Selected pattern:", rule.pattern);
+    console.log('\n=== Rule Selection Result ===');
+    console.log('Selected pattern:', rule.pattern);
 
     let doc: Document;
     switch (rule.fetchType) {
-      case "fetchSimple":
+      case 'fetchSimple':
         doc = await fetchSimple(url);
         break;
-      case "fetchWithRedirect":
+      case 'fetchWithRedirect':
         doc = await fetchWithRedirect(url, rule);
         break;
-      case "fetchByChrome":
+      case 'fetchByChrome':
         doc = await fetchByChrome(url, rule);
         break;
       default:
         doc = await fetchSimple(url);
     }
 
-    // YouTube 비디오인 경우 HTML 저장
-    if (rule.pattern === "youtube/video" && vault) {
-      const videoId = new URL(url).searchParams.get("v");
-      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-      const filename = `@youtube-video_${videoId}_${timestamp}.html`;
-      
-      // HTML 파일 저장
-      await vault.create(filename, doc.documentElement.outerHTML);
-      console.log(`Saved HTML to ${filename}`);
-    }
+    // // YouTube 비디오인 경우 HTML 저장
+    // if (rule.pattern === 'youtube/video' && vault) {
+    //   const videoId = new URL(url).searchParams.get('v');
+    //   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    //   const filename = `@youtube-video_${videoId}_${timestamp}.html`;
+
+    //   // HTML 파일 저장
+    //   await vault.create(filename, doc.documentElement.outerHTML);
+    //   console.log(`Saved HTML to ${filename}`);
+    // }
 
     // 속성 추출 (불필요한 요소 제거 전에 실행)
     const properties = extractProperties(doc, rule, url);
@@ -223,7 +232,7 @@ const fetchData = async (url: string, vault?: Vault): Promise<ClipData> => {
     if (!content) {
       throw new Error(`Content not found with selector: ${rule.rootSelector}`);
     }
-    console.log("Final content length:", content.innerHTML.length);
+    console.log('Final content length:', content.innerHTML.length);
 
     let html = content.innerHTML;
 
@@ -245,17 +254,9 @@ const fetchData = async (url: string, vault?: Vault): Promise<ClipData> => {
       html,
     };
   } catch (error) {
-    console.error("Error fetching data:", error);
+    console.error('Error fetching data:', error);
     throw error;
   }
 };
 
-export {
-  routeUrl,
-  executeCallback,
-  fetchWithRedirect,
-  fetchSimple,
-  fetchByChrome,
-  extractProperties,
-  fetchData,
-};
+export { routeUrl, executeCallback, fetchWithRedirect, fetchSimple, fetchByChrome, extractProperties, fetchData };
